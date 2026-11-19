@@ -8,8 +8,7 @@ from . import europeana
 
 app = FastAPI(title="Eco-Cultural Heritage API")
 
-# Кои адреси на фронтенда имат право да викат бекенда.
-# Няколко адреса се разделят със запетая.
+
 def parse_origins(raw: str) -> list[str]:
     """Чисти адресите: маха интервали, кавички и / накрая."""
     origins = []
@@ -32,17 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/api/debug-cors")
-def debug_cors():
-    """ВРЕМЕНЕН диагностичен маршрут. Ще го махнем след проверката."""
-    return {
-        "variable_is_set": os.getenv("ALLOWED_ORIGINS") is not None,
-        "allowed_origins": allowed_origins,
-    }
-
-app = FastAPI(title="Eco-Cultural Heritage API")
-
 Lang = Query("en", pattern="^(bg|en)$")  # поддържани езици
 Theme = Query(None, pattern="^(water|forest|garden|agriculture|mountain|wildlife)$")
 
@@ -57,6 +45,15 @@ def build_query(q: str, eco: bool, theme: str | None, strict: bool) -> str:
 @app.get("/")
 def home():
     return {"message": "Server is running."}
+
+
+@app.get("/api/debug-cors")
+def debug_cors():
+    """ВРЕМЕНЕН диагностичен маршрут. Ще го махнем след проверката."""
+    return {
+        "variable_is_set": os.getenv("ALLOWED_ORIGINS") is not None,
+        "allowed_origins": allowed_origins,
+    }
 
 
 @app.get("/api/themes")
