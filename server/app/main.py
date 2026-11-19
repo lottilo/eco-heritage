@@ -10,17 +10,36 @@ app = FastAPI(title="Eco-Cultural Heritage API")
 
 # Кои адреси на фронтенда имат право да викат бекенда.
 # Няколко адреса се разделят със запетая.
-allowed_origins = [
-    o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
-    if o.strip()
-]
+def parse_origins(raw: str) -> list[str]:
+    """Чисти адресите: маха интервали, кавички и / накрая."""
+    origins = []
+    for o in raw.split(","):
+        o = o.strip().strip('"').strip("'").rstrip("/")
+        if o:
+            origins.append(o)
+    return origins
+
+
+# Кои адреси на фронтенда имат право да викат бекенда.
+# Няколко адреса се разделят със запетая.
+allowed_origins = parse_origins(
+    os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+
+@app.get("/api/debug-cors")
+def debug_cors():
+    """ВРЕМЕНЕН диагностичен маршрут. Ще го махнем след проверката."""
+    return {
+        "variable_is_set": os.getenv("ALLOWED_ORIGINS") is not None,
+        "allowed_origins": allowed_origins,
+    }
 
 app = FastAPI(title="Eco-Cultural Heritage API")
 
