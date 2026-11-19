@@ -1,8 +1,26 @@
 import math
+import os
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from . import europeana
+
+app = FastAPI(title="Eco-Cultural Heritage API")
+
+# Кои адреси на фронтенда имат право да викат бекенда.
+# Няколко адреса се разделят със запетая.
+allowed_origins = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    if o.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 app = FastAPI(title="Eco-Cultural Heritage API")
 
@@ -113,4 +131,3 @@ async def area(
 
     items = [o for o in data["items"] if o["lat"] is not None and o["lng"] is not None]
     return {"total": data["total"], "returned": len(items), "items": items}
-    

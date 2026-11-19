@@ -40,9 +40,11 @@ const areaBtn = $<HTMLButtonElement>("#search-area");
 const radiusSel = $<HTMLSelectElement>("#radius");
 const mapStatus = $<HTMLParagraphElement>("#map-status");
 
-/* ---------- Заявки към нашия бекенд ---------- */
+// Адрес на бекенда. Локално е празен (ползва се Vite proxy), онлайн се задава от променлива.
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
+
 async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+  const response = await fetch(API_BASE + url);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
