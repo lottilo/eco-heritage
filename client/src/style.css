@@ -1,0 +1,103 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  background: #eef2ef;
+  color: #14231c;
+}
+
+#app {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+#q {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 11px;
+}
+
+#results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #cfd9d3;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+#nearby {
+  margin: 24px 0;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+#map {
+  height: 420px;
+  border: 1px solid #cfd9d3;
+  border-radius: 8px;
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.lang {
+  display: flex;
+}
+
+.lang button {
+  padding: 6px 12px;
+  border: 1px solid #cfd9d3;
+  background: #fff;
+  cursor: pointer;
+}
+
+.lang button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.lang button:last-child {
+  border-radius: 0 6px 6px 0;
+  border-left: 0;
+}
+
+.lang button[aria-pressed="true"] {
+  background: #2e6b4a;
+  color: #fff;
+  border-color: #2e6b4a;
+}

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Eco-Cultural Heritage App</title>
+  </head>
+  <body>
+    <main id="app">
+      <header class="top">
+        <h1 data-i18n="title">Eco-Cultural Heritage App</h1>
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" id="lang-bg" data-lang="bg">BG</button>
+          <button type="button" id="lang-en" data-lang="en">EN</button>
+        </div>
+      </header>
+
+      <form id="search-form">
+        <input id="q" type="text" data-i18n-placeholder="searchPlaceholder" required />
+        <label><input id="eco" type="checkbox" /> <span data-i18n="ecoOnly"></span></label>
+        <button type="submit" data-i18n="search"></button>
+      </form>
+      <p id="status" role="status"></p>
+
+      <section id="nearby">
+        <h2 data-i18n="nearMeTitle"></h2>
+        <div class="controls">
+          <button id="locate" type="button" data-i18n="locate"></button>
+          <label>
+            <span data-i18n="radius"></span>
+            <select id="radius"></select>
+          </label>
+          <button id="search-area" type="button" data-i18n="searchArea"></button>
+        </div>
+        <p id="map-status" role="status"></p>
+        <div id="map"></div>
+      </section>
+
+      <h2 data-i18n="resultsTitle"></h2>
+      <div id="results"></div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
