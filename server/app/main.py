@@ -47,15 +47,6 @@ def home():
     return {"message": "Server is running."}
 
 
-@app.get("/api/debug-cors")
-def debug_cors():
-    """ВРЕМЕНЕН диагностичен маршрут. Ще го махнем след проверката."""
-    return {
-        "variable_is_set": os.getenv("ALLOWED_ORIGINS") is not None,
-        "allowed_origins": allowed_origins,
-    }
-
-
 @app.get("/api/themes")
 def themes():
     """Списък с темите, за да ги показва фронтендът."""
