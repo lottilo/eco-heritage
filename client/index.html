@@ -16,10 +16,59 @@
       </header>
 
       <form id="search-form">
-        <input id="q" type="text" data-i18n-placeholder="searchPlaceholder" required />
+        <input id="q" type="text" data-i18n-placeholder="searchPlaceholder" />
         <label><input id="eco" type="checkbox" /> <span data-i18n="ecoOnly"></span></label>
         <button type="submit" data-i18n="search"></button>
       </form>
+
+      <details class="filters" open>
+        <summary data-i18n="filters"></summary>
+        <div class="filter-grid">
+          <label>
+            <span data-i18n="category"></span>
+            <select id="category">
+              <option value="" data-i18n="allCategories"></option>
+              <option value="archaeology" data-i18n="cat_archaeology"></option>
+              <option value="architecture" data-i18n="cat_architecture"></option>
+              <option value="history" data-i18n="cat_history"></option>
+              <option value="politics" data-i18n="cat_politics"></option>
+              <option value="religion" data-i18n="cat_religion"></option>
+              <option value="folklore" data-i18n="cat_folklore"></option>
+              <option value="photography" data-i18n="cat_photography"></option>
+              <option value="maps" data-i18n="cat_maps"></option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="materialType"></span>
+            <select id="type">
+              <option value="" data-i18n="allTypes"></option>
+              <option value="IMAGE" data-i18n="type_IMAGE"></option>
+              <option value="TEXT" data-i18n="type_TEXT"></option>
+              <option value="SOUND" data-i18n="type_SOUND"></option>
+              <option value="VIDEO" data-i18n="type_VIDEO"></option>
+              <option value="3D" data-i18n="type_3D"></option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="country"></span>
+            <select id="country"></select>
+          </label>
+          <label>
+            <span data-i18n="yearFrom"></span>
+            <input id="year-from" type="number" min="-3000" max="2100" step="1" />
+          </label>
+          <label>
+            <span data-i18n="yearTo"></span>
+            <input id="year-to" type="number" min="-3000" max="2100" step="1" />
+          </label>
+          <label class="check">
+            <input id="reusable" type="checkbox" />
+            <span data-i18n="reusableOnly"></span>
+          </label>
+          <button type="button" id="clear-filters" data-i18n="clearFilters"></button>
+        </div>
+      </details>
+
       <p id="status" role="status"></p>
 
       <section id="nearby">

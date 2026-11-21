@@ -5,6 +5,7 @@ import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { applyTranslations, getLang, setLang, t, type Lang } from "./i18n";
+import { COUNTRIES } from "./countries";
 
 interface Item {
   id: string;
@@ -16,6 +17,7 @@ interface Item {
   provider: string;
   rights: string;
   type: string | null;
+  year: string | null;
   lat: number | null;
   lng: number | null;
   distance_km?: number;
@@ -40,7 +42,50 @@ const areaBtn = $<HTMLButtonElement>("#search-area");
 const radiusSel = $<HTMLSelectElement>("#radius");
 const mapStatus = $<HTMLParagraphElement>("#map-status");
 
-// Адрес на бекенда. Локално е празен (ползва се Vite proxy), онлайн се задава от променлива.
+const categorySel = $<HTMLSelectElement>("#category");
+const typeSel = $<HTMLSelectElement>("#type");
+const countrySel = $<HTMLSelectElement>("#country");
+const yearFromInput = $<HTMLInputElement>("#year-from");
+const yearToInput = $<HTMLInputElement>("#year-to");
+const reusableInput = $<HTMLInputElement>("#reusable");
+const clearBtn = $<HTMLButtonElement>("#clear-filters");
+
+/* ---------- Филтри ---------- */
+function filterParams(): URLSearchParams {
+  const p = new URLSearchParams();
+  const add = (key: string, value: string) => {
+    if (value) p.set(key, value);
+  };
+  add("category", categorySel.value);
+  add("type", typeSel.value);
+  add("country", countrySel.value);
+  add("year_from", yearFromInput.value.trim());
+  add("year_to", yearToInput.value.trim());
+  if (reusableInput.checked) p.set("reusable", "true");
+  return p;
+}
+
+function yearsOk(target: HTMLElement): boolean {
+  const from = yearFromInput.value.trim();
+  const to = yearToInput.value.trim();
+  if (from && to && Number(from) > Number(to)) {
+    target.textContent = t("badYears");
+    return false;
+  }
+  return true;
+}
+
+clearBtn.addEventListener("click", () => {
+  categorySel.value = "";
+  typeSel.value = "";
+  countrySel.value = "";
+  yearFromInput.value = "";
+  yearToInput.value = "";
+  reusableInput.checked = false;
+});
+
+/* ---------- Заявки към нашия бекенд ---------- */
+// Локално е празен (ползва се Vite proxy), онлайн се задава от променлива.
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 async function getJson<T>(url: string): Promise<T> {
@@ -51,27 +96,37 @@ async function getJson<T>(url: string): Promise<T> {
   return response.json();
 }
 
+function withCommon(params: URLSearchParams, eco: boolean): URLSearchParams {
+  params.set("eco", String(eco));
+  params.set("lang", getLang());
+  for (const [key, value] of filterParams()) params.set(key, value);
+  return params;
+}
+
 const search = (q: string, eco: boolean) =>
   getJson<SearchResponse>(
-    `/api/search?${new URLSearchParams({ q, eco: String(eco), lang: getLang() })}`,
+    `/api/search?${withCommon(new URLSearchParams({ q: q || "*" }), eco)}`,
   );
 
-const nearby = (lat: number, lng: number, km: number) =>
+const nearby = (lat: number, lng: number, km: number, eco: boolean) =>
   getJson<SearchResponse>(
-    `/api/nearby?${new URLSearchParams({
-      lat: String(lat), lng: String(lng), km: String(km), lang: getLang(),
-    })}`,
+    `/api/nearby?${withCommon(
+      new URLSearchParams({ lat: String(lat), lng: String(lng), km: String(km) }),
+      eco,
+    )}`,
   );
 
-const area = (b: L.LatLngBounds) =>
+const area = (b: L.LatLngBounds, eco: boolean) =>
   getJson<SearchResponse>(
-    `/api/area?${new URLSearchParams({
-      south: String(Math.max(-90, b.getSouth())),
-      north: String(Math.min(90, b.getNorth())),
-      west: String(Math.max(-180, b.getWest())),
-      east: String(Math.min(180, b.getEast())),
-      lang: getLang(),
-    })}`,
+    `/api/area?${withCommon(
+      new URLSearchParams({
+        south: String(Math.max(-90, b.getSouth())),
+        north: String(Math.min(90, b.getNorth())),
+        west: String(Math.max(-180, b.getWest())),
+        east: String(Math.min(180, b.getEast())),
+      }),
+      eco,
+    )}`,
   );
 
 /* ---------- Карта (започваме с цяла Европа) ---------- */
@@ -122,6 +177,7 @@ function showError(target: HTMLElement, error: unknown, withHint = false) {
 }
 
 async function runNearby(lat: number, lng: number, km: number): Promise<void> {
+  if (!yearsOk(mapStatus)) return;
   clearAll();
   L.circleMarker([lat, lng], { radius: 9, color: "#2f5d8a", fillOpacity: 0.9 })
     .addTo(youLayer)
@@ -129,9 +185,9 @@ async function runNearby(lat: number, lng: number, km: number): Promise<void> {
   L.circle([lat, lng], { radius: km * 1000, color: "#2e6b4a", fill: false, weight: 1 })
     .addTo(youLayer);
 
-  mapStatus.textContent = t("searchingEco");
+  mapStatus.textContent = t("searchingMap");
   try {
-    const data = await nearby(lat, lng, km);
+    const data = await nearby(lat, lng, km, ecoInput.checked);
     addMarkers(data.items);
     mapStatus.textContent = data.items.length
       ? t("foundRadius", { km, n: data.items.length })
@@ -146,10 +202,11 @@ async function runArea(): Promise<void> {
     mapStatus.textContent = t("zoomIn");
     return;
   }
+  if (!yearsOk(mapStatus)) return;
   clearAll();
-  mapStatus.textContent = t("searchingEco");
+  mapStatus.textContent = t("searchingMap");
   try {
-    const data = await area(map.getBounds());
+    const data = await area(map.getBounds(), ecoInput.checked);
     addMarkers(data.items);
     mapStatus.textContent = data.items.length
       ? t("foundArea", { n: data.items.length })
@@ -203,7 +260,9 @@ function renderItem(item: Item): HTMLElement {
   title.textContent = item.title;
 
   const meta = document.createElement("small");
-  meta.textContent = [item.provider, item.country].filter(Boolean).join(", ");
+  meta.textContent = [item.provider, item.country, item.year]
+    .filter(Boolean)
+    .join(", ");
 
   const link = document.createElement("a");
   link.href = item.link;
@@ -217,14 +276,17 @@ function renderItem(item: Item): HTMLElement {
 }
 
 async function runSearch(): Promise<void> {
+  if (!yearsOk(statusEl)) return;
   statusEl.textContent = t("searching");
   resultsEl.replaceChildren();
   try {
     const data = await search(qInput.value.trim(), ecoInput.checked);
-    statusEl.textContent = t("foundSearch", {
-      total: data.total.toLocaleString(getLang()),
-      shown: data.items.length,
-    });
+    statusEl.textContent = data.items.length
+      ? t("foundSearch", {
+          total: data.total.toLocaleString(getLang()),
+          shown: data.items.length,
+        })
+      : t("noResults");
     resultsEl.append(...data.items.map(renderItem));
   } catch (error) {
     showError(statusEl, error, true);
@@ -255,9 +317,23 @@ function fillRadius(): void {
   );
 }
 
+function fillCountries(): void {
+  const selected = countrySel.value;
+  const label = ([en, bg]: [string, string]) => (getLang() === "bg" ? bg : en);
+  const sorted = [...COUNTRIES].sort((a, b) =>
+    label(a).localeCompare(label(b), getLang()),
+  );
+  countrySel.replaceChildren(
+    new Option(t("allCountries"), ""),
+    ...sorted.map((c) => new Option(label(c), c[0])),
+  );
+  countrySel.value = selected;
+}
+
 function refreshLanguage(): void {
   applyTranslations();
   fillRadius();
+  fillCountries();
   document.querySelectorAll<HTMLButtonElement>(".lang button").forEach((b) => {
     b.setAttribute("aria-pressed", String(b.dataset.lang === getLang()));
   });
