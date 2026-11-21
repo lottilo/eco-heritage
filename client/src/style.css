@@ -101,3 +101,67 @@ form {
   color: #fff;
   border-color: #2e6b4a;
 }
+
+.filters {
+  margin: 14px 0;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #cfd9d3;
+  border-radius: 8px;
+}
+
+.filters summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  align-items: end;
+}
+
+.filter-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.filter-grid label.check {
+  flex-direction: row;
+  align-items: center;
+}
+
+.filter-grid select,
+.filter-grid input[type="number"] {
+  padding: 7px 8px;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.pager:empty {
+  display: none;
+}
+
+.pager button {
+  padding: 8px 14px;
+  border: 1px solid #cfd9d3;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pager button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

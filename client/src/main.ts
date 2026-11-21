@@ -128,9 +128,17 @@ function withCommon(params: URLSearchParams, eco: boolean): URLSearchParams {
 
 const keyword = () => qInput.value.trim() || "*";
 
-const search = (eco: boolean) =>
+const PAGE_SIZE = 24;
+const MAX_RESULTS = 1000; // Europeana дава достъп само до първите 1000 резултата
+
+const search = (eco: boolean, page = 1) =>
   getJson<SearchResponse>(
-    `/api/search?${withCommon(new URLSearchParams({ q: keyword() }), eco)}`,
+    `/api/search?${withCommon(
+      new URLSearchParams({
+        q: keyword(), page: String(page), rows: String(PAGE_SIZE),
+      }),
+      eco,
+    )}`,
   );
 
 const nearby = (lat: number, lng: number, km: number, eco: boolean) =>
@@ -143,7 +151,7 @@ const nearby = (lat: number, lng: number, km: number, eco: boolean) =>
     )}`,
   );
 
-const area = (box: Box, eco: boolean) =>
+const area = (box: Box, eco: boolean, page = 1, rows = 100) =>
   getJson<SearchResponse>(
     `/api/area?${withCommon(
       new URLSearchParams({
@@ -152,6 +160,8 @@ const area = (box: Box, eco: boolean) =>
         west: String(box.west),
         east: String(box.east),
         q: keyword(),
+        page: String(page),
+        rows: String(rows),
       }),
       eco,
     )}`,
@@ -320,14 +330,56 @@ function renderItem(item: Item): HTMLElement {
   return card;
 }
 
+/* ---------- Прелистване ---------- */
+let page = 1;
+const pagerEl = $<HTMLDivElement>("#pager");
+
+function renderPager(total: number): void {
+  pagerEl.replaceChildren();
+  const maxPages = Math.floor(MAX_RESULTS / PAGE_SIZE);
+  const allPages = Math.ceil(total / PAGE_SIZE);
+  const pages = Math.min(allPages, maxPages);
+  if (pages <= 1) return;
+
+  const go = (delta: number) => {
+    page += delta;
+    void rerunList?.();
+    $<HTMLElement>("#results-title").scrollIntoView({ behavior: "smooth" });
+  };
+
+  const prev = document.createElement("button");
+  prev.type = "button";
+  prev.textContent = t("prev");
+  prev.disabled = page <= 1;
+  prev.addEventListener("click", () => go(-1));
+
+  const label = document.createElement("span");
+  label.textContent = t("pageOf", { page, pages });
+
+  const next = document.createElement("button");
+  next.type = "button";
+  next.textContent = t("next");
+  next.disabled = page >= pages;
+  next.addEventListener("click", () => go(1));
+
+  pagerEl.append(prev, label, next);
+
+  if (allPages > maxPages) {
+    const note = document.createElement("small");
+    note.textContent = t("limitNote", { n: MAX_RESULTS });
+    pagerEl.append(note);
+  }
+}
+
 /* Търсене без място: по дума и филтри */
 async function runSearch(): Promise<void> {
   if (!yearsOk(statusEl)) return;
   const id = ++runId;
   statusEl.textContent = t("searching");
   resultsEl.replaceChildren();
+  pagerEl.replaceChildren();
   try {
-    const data = await search(ecoInput.checked);
+    const data = await search(ecoInput.checked, page);
     if (id !== runId) return;
     statusEl.textContent = data.items.length
       ? t("foundSearch", {
@@ -336,6 +388,7 @@ async function runSearch(): Promise<void> {
         })
       : t("noResults");
     resultsEl.append(...data.items.map(renderItem));
+    renderPager(data.total);
   } catch (error) {
     if (id === runId) showError(statusEl, error, true);
   }
@@ -350,13 +403,16 @@ async function runPlace(place: Place): Promise<void> {
   const label = shortName(place.name);
   clearAll();
   resultsEl.replaceChildren();
-  map.fitBounds([
-    [place.south, place.west],
-    [place.north, place.east],
-  ]);
+  pagerEl.replaceChildren();
+  if (page === 1) {
+    map.fitBounds([
+      [place.south, place.west],
+      [place.north, place.east],
+    ]);
+  }
   statusEl.textContent = t("searchingIn", { place: label });
   try {
-    const data = await area(place, ecoInput.checked);
+    const data = await area(place, ecoInput.checked, page, PAGE_SIZE);
     if (id !== runId) return;
     addMarkers(data.items);
     statusEl.textContent = data.items.length
@@ -367,6 +423,7 @@ async function runPlace(place: Place): Promise<void> {
         })
       : t("noResults");
     resultsEl.append(...data.items.map(renderItem));
+    renderPager(data.total);
   } catch (error) {
     if (id === runId) showError(statusEl, error, true);
   }
@@ -388,6 +445,7 @@ function showAlternatives(places: Place[], chosen: Place): void {
     button.className = "alt-place";
     button.textContent = p.name;
     button.addEventListener("click", () => {
+      page = 1;
       rerunList = () => runPlace(p);
       showAlternatives(places, p);
       void runPlace(p);
@@ -399,6 +457,7 @@ function showAlternatives(places: Place[], chosen: Place): void {
 async function submitSearch(): Promise<void> {
   const placeText = placeInput.value.trim();
   placeInfo.replaceChildren();
+  page = 1;
 
   if (!placeText) {
     rerunList = runSearch;

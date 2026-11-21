@@ -66,6 +66,17 @@ def filters_from(f: dict) -> list[str]:
         f["type"], f["country"], f["year_from"], f["year_to"]
     )
 
+MAX_RESULTS = 1000  # Europeana дава достъп само до първите 1000 резултата
+
+
+def paging(page: int, rows: int) -> int:
+    """Превръща номер на страница в начална позиция и пази ограничението."""
+    start = (page - 1) * rows + 1
+    if start + rows - 1 > MAX_RESULTS:
+        raise HTTPException(
+            422, f"Only the first {MAX_RESULTS} results can be browsed. Narrow the search."
+        )
+    return start
 
 @app.get("/")
 def home():
@@ -91,6 +102,7 @@ async def geocode_place(
     except RuntimeError as e:
         raise HTTPException(502, str(e))
 
+
 @app.get("/api/search")
 async def search(
     q: str = "*",
@@ -98,10 +110,12 @@ async def search(
     f: dict = Depends(filters),
     lang: str = Lang,
     page: int = Query(1, ge=1),
+    rows: int = Query(24, ge=1, le=100),
 ):
+    start = paging(page, rows)
     try:
         return await europeana.search(
-            query_from(q, eco, f), rows=24, start=(page - 1) * 24 + 1,
+            query_from(q, eco, f), rows=rows, start=start,
             qf=filters_from(f), lang=lang, reusable=f["reusable"],
         )
     except RuntimeError as e:
@@ -157,16 +171,18 @@ async def area(
     f: dict = Depends(filters),
     lang: str = Lang,
     page: int = Query(1, ge=1),
+    rows: int = Query(100, ge=1, le=100),
 ):
     """Обекти във видимата част на картата (където и да е в Европа)."""
     if south >= north or west >= east:
         raise HTTPException(400, "Invalid area: need south < north and west < east.")
 
+    start = paging(page, rows)
     qf = europeana.bbox_filters(south, north, west, east) + filters_from(f)
 
     try:
         data = await europeana.search(
-            query_from(q, eco, f), rows=100, start=(page - 1) * 100 + 1,
+            query_from(q, eco, f), rows=rows, start=start,
             qf=qf, lang=lang, reusable=f["reusable"],
         )
     except RuntimeError as e:
