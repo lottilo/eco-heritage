@@ -16,10 +16,12 @@
       </header>
 
       <form id="search-form">
+        <input id="place" type="text" data-i18n-placeholder="placePlaceholder" />
         <input id="q" type="text" data-i18n-placeholder="searchPlaceholder" />
         <label><input id="eco" type="checkbox" /> <span data-i18n="ecoOnly"></span></label>
         <button type="submit" data-i18n="search"></button>
       </form>
+      <div id="place-info" class="place-info"></div>
 
       <details class="filters" open>
         <summary data-i18n="filters"></summary>

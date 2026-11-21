@@ -28,11 +28,32 @@ interface SearchResponse {
   items: Item[];
 }
 
+interface Box {
+  south: number;
+  north: number;
+  west: number;
+  east: number;
+}
+
+interface Place extends Box {
+  name: string;
+  category: string | null;
+  kind: string | null;
+  lat: number;
+  lng: number;
+}
+
+interface GeocodeResponse {
+  results: Place[];
+}
+
 /* ---------- Елементи на страницата ---------- */
 const $ = <T extends HTMLElement>(selector: string) =>
   document.querySelector<T>(selector)!;
 
 const form = $<HTMLFormElement>("#search-form");
+const placeInput = $<HTMLInputElement>("#place");
+const placeInfo = $<HTMLDivElement>("#place-info");
 const qInput = $<HTMLInputElement>("#q");
 const ecoInput = $<HTMLInputElement>("#eco");
 const statusEl = $<HTMLParagraphElement>("#status");
@@ -76,6 +97,8 @@ function yearsOk(target: HTMLElement): boolean {
 }
 
 clearBtn.addEventListener("click", () => {
+  placeInput.value = "";
+  placeInfo.replaceChildren();
   categorySel.value = "";
   typeSel.value = "";
   countrySel.value = "";
@@ -103,31 +126,50 @@ function withCommon(params: URLSearchParams, eco: boolean): URLSearchParams {
   return params;
 }
 
-const search = (q: string, eco: boolean) =>
+const keyword = () => qInput.value.trim() || "*";
+
+const search = (eco: boolean) =>
   getJson<SearchResponse>(
-    `/api/search?${withCommon(new URLSearchParams({ q: q || "*" }), eco)}`,
+    `/api/search?${withCommon(new URLSearchParams({ q: keyword() }), eco)}`,
   );
 
 const nearby = (lat: number, lng: number, km: number, eco: boolean) =>
   getJson<SearchResponse>(
     `/api/nearby?${withCommon(
-      new URLSearchParams({ lat: String(lat), lng: String(lng), km: String(km) }),
-      eco,
-    )}`,
-  );
-
-const area = (b: L.LatLngBounds, eco: boolean) =>
-  getJson<SearchResponse>(
-    `/api/area?${withCommon(
       new URLSearchParams({
-        south: String(Math.max(-90, b.getSouth())),
-        north: String(Math.min(90, b.getNorth())),
-        west: String(Math.max(-180, b.getWest())),
-        east: String(Math.min(180, b.getEast())),
+        lat: String(lat), lng: String(lng), km: String(km), q: keyword(),
       }),
       eco,
     )}`,
   );
+
+const area = (box: Box, eco: boolean) =>
+  getJson<SearchResponse>(
+    `/api/area?${withCommon(
+      new URLSearchParams({
+        south: String(box.south),
+        north: String(box.north),
+        west: String(box.west),
+        east: String(box.east),
+        q: keyword(),
+      }),
+      eco,
+    )}`,
+  );
+
+const geocode = (q: string) =>
+  getJson<GeocodeResponse>(
+    `/api/geocode?${new URLSearchParams({ q, lang: getLang() })}`,
+  );
+
+function boxOf(b: L.LatLngBounds): Box {
+  return {
+    south: Math.max(-90, b.getSouth()),
+    north: Math.min(90, b.getNorth()),
+    west: Math.max(-180, b.getWest()),
+    east: Math.min(180, b.getEast()),
+  };
+}
 
 /* ---------- Карта (започваме с цяла Европа) ---------- */
 const map = L.map("map").setView([52, 15], 4);
@@ -168,8 +210,11 @@ function addMarkers(items: Item[]): void {
   }
 }
 
-/* Последното действие на картата, за да го повторим при смяна на езика */
-let rerun: (() => Promise<void>) | null = null;
+/* Последните действия, за да ги повторим при смяна на езика.
+   rerunList: търсенето и резултатите. rerunMap: бутоните на картата. */
+let rerunList: (() => Promise<void>) | null = null;
+let rerunMap: (() => Promise<void>) | null = null;
+let runId = 0; // за да игнорираме остарели отговори
 
 function showError(target: HTMLElement, error: unknown, withHint = false) {
   const msg = (error as Error).message;
@@ -206,7 +251,7 @@ async function runArea(): Promise<void> {
   clearAll();
   mapStatus.textContent = t("searchingMap");
   try {
-    const data = await area(map.getBounds(), ecoInput.checked);
+    const data = await area(boxOf(map.getBounds()), ecoInput.checked);
     addMarkers(data.items);
     mapStatus.textContent = data.items.length
       ? t("foundArea", { n: data.items.length })
@@ -228,8 +273,8 @@ locateBtn.addEventListener("click", () => {
       const { latitude: lat, longitude: lng } = position.coords;
       const km = Number(radiusSel.value);
       map.setView([lat, lng], km > 50 ? 8 : km > 25 ? 9 : km > 5 ? 10 : 12);
-      rerun = () => runNearby(lat, lng, km);
-      await rerun();
+      rerunMap = () => runNearby(lat, lng, km);
+      await rerunMap();
     },
     (error) => {
       mapStatus.textContent = t("geoDenied", { msg: error.message });
@@ -239,11 +284,11 @@ locateBtn.addEventListener("click", () => {
 });
 
 areaBtn.addEventListener("click", () => {
-  rerun = runArea;
+  rerunMap = runArea;
   void runArea();
 });
 
-/* ---------- Търсачка ---------- */
+/* ---------- Резултати ---------- */
 function renderItem(item: Item): HTMLElement {
   const card = document.createElement("article");
   card.className = "card";
@@ -275,12 +320,15 @@ function renderItem(item: Item): HTMLElement {
   return card;
 }
 
+/* Търсене без място: по дума и филтри */
 async function runSearch(): Promise<void> {
   if (!yearsOk(statusEl)) return;
+  const id = ++runId;
   statusEl.textContent = t("searching");
   resultsEl.replaceChildren();
   try {
-    const data = await search(qInput.value.trim(), ecoInput.checked);
+    const data = await search(ecoInput.checked);
+    if (id !== runId) return;
     statusEl.textContent = data.items.length
       ? t("foundSearch", {
           total: data.total.toLocaleString(getLang()),
@@ -289,16 +337,96 @@ async function runSearch(): Promise<void> {
       : t("noResults");
     resultsEl.append(...data.items.map(renderItem));
   } catch (error) {
+    if (id === runId) showError(statusEl, error, true);
+  }
+}
+
+/* Търсене в област на избрано място */
+const shortName = (name: string) => name.split(",")[0].trim();
+
+async function runPlace(place: Place): Promise<void> {
+  if (!yearsOk(statusEl)) return;
+  const id = ++runId;
+  const label = shortName(place.name);
+  clearAll();
+  resultsEl.replaceChildren();
+  map.fitBounds([
+    [place.south, place.west],
+    [place.north, place.east],
+  ]);
+  statusEl.textContent = t("searchingIn", { place: label });
+  try {
+    const data = await area(place, ecoInput.checked);
+    if (id !== runId) return;
+    addMarkers(data.items);
+    statusEl.textContent = data.items.length
+      ? t("foundInPlace", {
+          place: label,
+          n: data.items.length,
+          total: data.total.toLocaleString(getLang()),
+        })
+      : t("noResults");
+    resultsEl.append(...data.items.map(renderItem));
+  } catch (error) {
+    if (id === runId) showError(statusEl, error, true);
+  }
+}
+
+/* Показва другите съвпадения за мястото като бутони */
+function showAlternatives(places: Place[], chosen: Place): void {
+  placeInfo.replaceChildren();
+  const others = places.filter((p) => p !== chosen);
+  if (!others.length) return;
+
+  const label = document.createElement("span");
+  label.textContent = t("otherMatches");
+  placeInfo.append(label);
+
+  for (const p of others) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "alt-place";
+    button.textContent = p.name;
+    button.addEventListener("click", () => {
+      rerunList = () => runPlace(p);
+      showAlternatives(places, p);
+      void runPlace(p);
+    });
+    placeInfo.append(button);
+  }
+}
+
+async function submitSearch(): Promise<void> {
+  const placeText = placeInput.value.trim();
+  placeInfo.replaceChildren();
+
+  if (!placeText) {
+    rerunList = runSearch;
+    await runSearch();
+    return;
+  }
+
+  if (!yearsOk(statusEl)) return;
+  statusEl.textContent = t("searchingPlace");
+  try {
+    const { results } = await geocode(placeText);
+    if (!results.length) {
+      statusEl.textContent = t("placeNotFound");
+      return;
+    }
+    const chosen = results[0];
+    rerunList = () => runPlace(chosen);
+    rerunMap = null; // картата вече показва резултатите от мястото
+    showAlternatives(results, chosen);
+    await runPlace(chosen);
+  } catch (error) {
     showError(statusEl, error, true);
   }
 }
 
-let searched = false;
-
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  searched = true;
-  void runSearch();
+  void submitSearch();
 });
 
 /* ---------- Език ---------- */
@@ -343,9 +471,9 @@ document.querySelectorAll<HTMLButtonElement>(".lang button").forEach((button) =>
   button.addEventListener("click", () => {
     setLang(button.dataset.lang as Lang);
     refreshLanguage();
-    // Презареждаме последните резултати на новия език
-    if (searched) void runSearch();
-    if (rerun) void rerun();
+    // Повтаряме последните действия на новия език
+    if (rerunList) void rerunList();
+    if (rerunMap) void rerunMap();
   });
 });
 
