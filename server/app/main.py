@@ -4,7 +4,7 @@ import os
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import europeana
+from . import europeana, geocode
 
 app = FastAPI(title="Eco-Cultural Heritage API")
 
@@ -80,6 +80,16 @@ def categories():
         "themes": list(europeana.THEMES),
     }
 
+@app.get("/api/geocode")
+async def geocode_place(
+    q: str = Query(min_length=2, max_length=100),
+    lang: str = Lang,
+):
+    """Намира място по име и връща координати и област за картата."""
+    try:
+        return {"results": await geocode.geocode(q, lang)}
+    except RuntimeError as e:
+        raise HTTPException(502, str(e))
 
 @app.get("/api/search")
 async def search(
