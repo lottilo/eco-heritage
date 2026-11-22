@@ -4,7 +4,7 @@ import os
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import europeana, geocode
+from . import europeana, geocode, places
 
 app = FastAPI(title="Eco-Cultural Heritage API")
 
@@ -190,3 +190,26 @@ async def area(
 
     items = [o for o in data["items"] if o["lat"] is not None and o["lng"] is not None]
     return {"total": data["total"], "returned": len(items), "items": items}
+
+
+@app.get("/api/places")
+async def places_in_area(
+    south: float = Query(ge=-90, le=90),
+    north: float = Query(ge=-90, le=90),
+    west: float = Query(ge=-180, le=180),
+    east: float = Query(ge=-180, le=180),
+    category: str | None = Query(
+        None, pattern="^(archaeology|architecture|religion|history|museum)$"
+    ),
+    lang: str = Lang,
+    limit: int = Query(150, ge=1, le=300),
+):
+    """Исторически и културни обекти в област (от OpenStreetMap)."""
+    if south >= north or west >= east:
+        raise HTTPException(400, "Invalid area: need south < north and west < east.")
+    try:
+        return await places.find_places(south, north, west, east, category, lang, limit)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))

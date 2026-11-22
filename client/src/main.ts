@@ -366,7 +366,10 @@ function renderPager(total: number): void {
 
   if (allPages > maxPages) {
     const note = document.createElement("small");
-    note.textContent = t("limitNote", { n: MAX_RESULTS });
+    note.textContent = t("limitNote", {
+      n: (maxPages * PAGE_SIZE).toLocaleString(getLang()),
+      total: total.toLocaleString(getLang()),
+    });
     pagerEl.append(note);
   }
 }
