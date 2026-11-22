@@ -19,6 +19,7 @@
         <input id="place" type="text" data-i18n-placeholder="placePlaceholder" />
         <input id="q" type="text" data-i18n-placeholder="searchPlaceholder" />
         <label><input id="eco" type="checkbox" /> <span data-i18n="ecoOnly"></span></label>
+        <label><input id="show-places" type="checkbox" checked /> <span data-i18n="placesToggle"></span></label>
         <button type="submit" data-i18n="search"></button>
       </form>
       <div id="place-info" class="place-info"></div>
@@ -84,10 +85,22 @@
           <button id="search-area" type="button" data-i18n="searchArea"></button>
         </div>
         <p id="map-status" role="status"></p>
+        <p class="legend">
+          <span class="dot dot-eu"></span> <span data-i18n="legendEuropeana"></span>
+          <span class="dot dot-pl"></span> <span data-i18n="legendPlaces"></span>
+        </p>
         <div id="map"></div>
       </section>
 
-      <h2 id="results-title" data-i18n="resultsTitle"></h2>
+      <section id="places-section">
+        <h2 data-i18n="placesTitle"></h2>
+        <p id="places-status" role="status"></p>
+        <div id="places" class="cards"></div>
+        <div id="places-more" class="pager"></div>
+        <small data-i18n="placesSource"></small>
+      </section>
+
+      <h2 id="results-title" data-i18n="europeanaTitle"></h2>
       <div id="results"></div>
       <div id="pager" class="pager"></div>
     </main>

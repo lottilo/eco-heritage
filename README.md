@@ -26,6 +26,7 @@ python -m venv .venv
 pip install -r requirements.txt
 Копирай `.env.example` като `.env` и сложи своя Europeana API ключ.
 uvicorn app.main:app --reload --port 3001
+Променливи на средата: EUROPEANA_KEY и по желание ALLOWED_ORIGINS“.
 
 ### 2. Фронтенд (във втори терминал)
 cd client
@@ -42,3 +43,13 @@ npm run dev
 ## Източник на данните
 Данните идват от Europeana. Всеки запис има собствен лиценз и институция-
 доставчик, които трябва да се посочват при преизползване.
+## Онлайн версия
+- Приложение: https://eco-heritage.netlify.app
+- Бекенд API (документация): https://eco-heritage-api.onrender.com/docs
+
+Бележка: бекендът е на безплатен хостинг и заспива при неактивност.
+Първата заявка след пауза може да отнеме около минута.
+
+## Версии
+- `v0` – локален работещ прототип
+- `v0.1` – публикувана онлайн версия (Netlify + Render)

@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import { applyTranslations, getLang, setLang, t, type Lang } from "./i18n";
+import { applyTranslations, getLang, setLang, t, type Key, type Lang } from "./i18n";
 import { COUNTRIES } from "./countries";
 
 interface Item {
@@ -47,6 +47,28 @@ interface GeocodeResponse {
   results: Place[];
 }
 
+interface PlaceItem {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  kind: string;
+  lat: number;
+  lng: number;
+  source: string;
+  license: string;
+  link: string;
+  wikidata: string | null;
+  wikipedia: string | null;
+}
+
+interface PlacesResponse {
+  returned: number;
+  stale: boolean;
+  truncated: boolean;
+  items: PlaceItem[];
+}
+
 /* ---------- Елементи на страницата ---------- */
 const $ = <T extends HTMLElement>(selector: string) =>
   document.querySelector<T>(selector)!;
@@ -56,12 +78,18 @@ const placeInput = $<HTMLInputElement>("#place");
 const placeInfo = $<HTMLDivElement>("#place-info");
 const qInput = $<HTMLInputElement>("#q");
 const ecoInput = $<HTMLInputElement>("#eco");
+const showPlacesInput = $<HTMLInputElement>("#show-places");
 const statusEl = $<HTMLParagraphElement>("#status");
 const resultsEl = $<HTMLDivElement>("#results");
 const locateBtn = $<HTMLButtonElement>("#locate");
 const areaBtn = $<HTMLButtonElement>("#search-area");
 const radiusSel = $<HTMLSelectElement>("#radius");
 const mapStatus = $<HTMLParagraphElement>("#map-status");
+
+const placesSection = $<HTMLElement>("#places-section");
+const placesStatus = $<HTMLParagraphElement>("#places-status");
+const placesListEl = $<HTMLDivElement>("#places");
+const placesMoreEl = $<HTMLDivElement>("#places-more");
 
 const categorySel = $<HTMLSelectElement>("#category");
 const typeSel = $<HTMLSelectElement>("#type");
@@ -111,10 +139,18 @@ clearBtn.addEventListener("click", () => {
 // Локално е празен (ползва се Vite proxy), онлайн се задава от променлива.
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
+class ApiError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`HTTP ${status}`);
+    this.status = status;
+  }
+}
+
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(API_BASE + url);
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    throw new ApiError(response.status);
   }
   return response.json();
 }
@@ -181,6 +217,12 @@ function boxOf(b: L.LatLngBounds): Box {
   };
 }
 
+function boxAround(lat: number, lng: number, km: number): Box {
+  const dLat = km / 111;
+  const dLng = km / (111 * Math.cos((lat * Math.PI) / 180));
+  return { south: lat - dLat, north: lat + dLat, west: lng - dLng, east: lng + dLng };
+}
+
 /* ---------- Карта (започваме с цяла Европа) ---------- */
 const map = L.map("map").setView([52, 15], 4);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -190,24 +232,38 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 // Твоята позиция и кръгът на радиуса не се групират
 const youLayer = L.layerGroup().addTo(map);
-// Обектите от Europeana се групират в клъстери
+// Материалите от Europeana се групират в клъстери
 const cluster = L.markerClusterGroup({ maxClusterRadius: 45 }).addTo(map);
+// Забележителностите са отделен слой с други цветове
+const placesCluster = L.markerClusterGroup({
+  maxClusterRadius: 40,
+  iconCreateFunction: (c) =>
+    L.divIcon({
+      html: `<div><span>${c.getChildCount()}</span></div>`,
+      className: "marker-cluster marker-cluster-places",
+      iconSize: L.point(40, 40),
+    }),
+}).addTo(map);
 
 function clearAll(): void {
   youLayer.clearLayers();
   cluster.clearLayers();
 }
 
+function linkEl(href: string, text: string): HTMLAnchorElement {
+  const a = document.createElement("a");
+  a.href = href;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.textContent = text;
+  return a;
+}
+
 function popupFor(item: Item): HTMLElement {
   const box = document.createElement("div");
   const title = document.createElement("strong");
   title.textContent = item.title;
-  const link = document.createElement("a");
-  link.href = item.link;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.textContent = t("viewOn");
-  box.append(title, document.createElement("br"), link);
+  box.append(title, document.createElement("br"), linkEl(item.link, t("viewOn")));
   return box;
 }
 
@@ -221,9 +277,11 @@ function addMarkers(items: Item[]): void {
 }
 
 /* Последните действия, за да ги повторим при смяна на езика.
-   rerunList: търсенето и резултатите. rerunMap: бутоните на картата. */
+   rerunList: търсенето и резултатите. rerunMap: бутоните на картата.
+   rerunPlaces: забележителностите. */
 let rerunList: (() => Promise<void>) | null = null;
 let rerunMap: (() => Promise<void>) | null = null;
+let rerunPlaces: (() => Promise<void>) | null = null;
 let runId = 0; // за да игнорираме остарели отговори
 
 function showError(target: HTMLElement, error: unknown, withHint = false) {
@@ -231,6 +289,173 @@ function showError(target: HTMLElement, error: unknown, withHint = false) {
   target.textContent = t("error", { msg }) + (withHint ? " " + t("serverHint") : "");
 }
 
+/* ---------- Забележителности (OpenStreetMap през нашия бекенд) ---------- */
+const MAX_PLACES_SPAN = 1.0; // същото ограничение като в бекенда
+const PLACES_PAGE = 12;
+const PLACE_CATEGORIES = new Set(["archaeology", "architecture", "religion", "history"]);
+
+let placesRun = 0;
+let placesAll: PlaceItem[] = [];
+let placesShown = PLACES_PAGE;
+
+/** Категория за забележителностите според избора във филтъра.
+    null: всички. false: избраната категория не важи за забележителности. */
+function placesCategory(): string | null | false {
+  const value = categorySel.value;
+  if (!value) return null;
+  return PLACE_CATEGORIES.has(value) ? value : false;
+}
+
+function wikipediaUrl(tag: string): string | null {
+  const i = tag.indexOf(":");
+  if (i < 2) return null;
+  const lang = tag.slice(0, i);
+  const title = tag.slice(i + 1);
+  if (!/^[a-z-]{2,12}$/.test(lang) || !title) return null;
+  return `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`;
+}
+
+function placeLinks(item: PlaceItem): HTMLAnchorElement[] {
+  const links = [linkEl(item.link, t("linkOsm"))];
+  const wiki = item.wikipedia ? wikipediaUrl(item.wikipedia) : null;
+  if (wiki) links.push(linkEl(wiki, t("linkWikipedia")));
+  if (item.wikidata && /^Q\d+$/.test(item.wikidata)) {
+    links.push(linkEl(`https://www.wikidata.org/wiki/${item.wikidata}`, t("linkWikidata")));
+  }
+  return links;
+}
+
+function placeLabel(item: PlaceItem): string {
+  return [t(`pc_${item.category}` as Key), item.kind].filter(Boolean).join(" · ");
+}
+
+function renderPlaceCard(item: PlaceItem): HTMLElement {
+  const card = document.createElement("article");
+  card.className = "card place-card";
+
+  const title = document.createElement("h3");
+  title.textContent = item.title;
+
+  const meta = document.createElement("small");
+  meta.textContent = placeLabel(item);
+
+  card.append(title, meta);
+
+  if (item.description) {
+    const text = document.createElement("p");
+    text.textContent = item.description;
+    card.append(text);
+  }
+
+  const links = document.createElement("div");
+  links.className = "place-links";
+  links.append(...placeLinks(item));
+  card.append(links);
+  return card;
+}
+
+function popupForPlace(item: PlaceItem): HTMLElement {
+  const box = document.createElement("div");
+  const title = document.createElement("strong");
+  title.textContent = item.title;
+  const meta = document.createElement("small");
+  meta.textContent = placeLabel(item);
+  const links = document.createElement("div");
+  links.className = "place-links";
+  links.append(...placeLinks(item));
+  box.append(title, document.createElement("br"), meta, links);
+  return box;
+}
+
+function renderPlaces(): void {
+  placesListEl.replaceChildren(...placesAll.slice(0, placesShown).map(renderPlaceCard));
+  placesMoreEl.replaceChildren();
+  if (placesAll.length > placesShown) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = t("showMore");
+    button.addEventListener("click", () => {
+      placesShown += PLACES_PAGE;
+      renderPlaces();
+    });
+    placesMoreEl.append(button);
+  }
+}
+
+function clearPlaces(): void {
+  placesRun++; // отменя заявки, които още чакат
+  placesCluster.clearLayers();
+  placesListEl.replaceChildren();
+  placesMoreEl.replaceChildren();
+  placesStatus.textContent = "";
+  placesAll = [];
+}
+
+function syncPlacesVisibility(): void {
+  const on = showPlacesInput.checked;
+  placesSection.hidden = !on;
+  if (on) map.addLayer(placesCluster);
+  else map.removeLayer(placesCluster);
+}
+
+async function loadPlaces(box: Box): Promise<void> {
+  rerunPlaces = () => loadPlaces(box);
+  clearPlaces();
+  if (!showPlacesInput.checked) return;
+
+  const category = placesCategory();
+  if (category === false) return;
+
+  if (box.north - box.south > MAX_PLACES_SPAN || box.east - box.west > MAX_PLACES_SPAN) {
+    placesStatus.textContent = t("placesTooBig");
+    return;
+  }
+
+  const id = ++placesRun;
+  placesStatus.textContent = t("placesSearching");
+  const params = new URLSearchParams({
+    south: String(box.south),
+    north: String(box.north),
+    west: String(box.west),
+    east: String(box.east),
+    lang: getLang(),
+  });
+  if (category) params.set("category", category);
+
+  try {
+    const data = await getJson<PlacesResponse>(`/api/places?${params}`);
+    if (id !== placesRun) return;
+    placesAll = data.items;
+    placesShown = PLACES_PAGE;
+    for (const item of data.items) {
+      L.circleMarker([item.lat, item.lng], {
+        radius: 7, color: "#b45309", fillColor: "#d97706", fillOpacity: 0.8,
+      }).addTo(placesCluster).bindPopup(popupForPlace(item));
+    }
+    renderPlaces();
+    placesStatus.textContent = data.items.length
+      ? [
+          t("placesFound", { n: data.items.length }),
+          data.stale ? t("placesStale") : "",
+          data.truncated ? t("placesTruncated") : "",
+        ].filter(Boolean).join(" ")
+      : t("placesNone");
+  } catch (error) {
+    if (id !== placesRun) return;
+    placesStatus.textContent =
+      error instanceof ApiError && error.status === 422
+        ? t("placesTooBig")
+        : t("placesUnavailable");
+  }
+}
+
+showPlacesInput.addEventListener("change", () => {
+  syncPlacesVisibility();
+  if (showPlacesInput.checked) void rerunPlaces?.();
+  else clearPlaces();
+});
+
+/* ---------- Карта: около мен и в област ---------- */
 async function runNearby(lat: number, lng: number, km: number): Promise<void> {
   if (!yearsOk(mapStatus)) return;
   clearAll();
@@ -239,6 +464,8 @@ async function runNearby(lat: number, lng: number, km: number): Promise<void> {
     .bindPopup(t("youAreHere"));
   L.circle([lat, lng], { radius: km * 1000, color: "#2e6b4a", fill: false, weight: 1 })
     .addTo(youLayer);
+
+  void loadPlaces(boxAround(lat, lng, km));
 
   mapStatus.textContent = t("searchingMap");
   try {
@@ -259,9 +486,11 @@ async function runArea(): Promise<void> {
   }
   if (!yearsOk(mapStatus)) return;
   clearAll();
+  const box = boxOf(map.getBounds());
+  void loadPlaces(box);
   mapStatus.textContent = t("searchingMap");
   try {
-    const data = await area(boxOf(map.getBounds()), ecoInput.checked);
+    const data = await area(box, ecoInput.checked);
     addMarkers(data.items);
     mapStatus.textContent = data.items.length
       ? t("foundArea", { n: data.items.length })
@@ -298,7 +527,7 @@ areaBtn.addEventListener("click", () => {
   void runArea();
 });
 
-/* ---------- Резултати ---------- */
+/* ---------- Резултати от Europeana ---------- */
 function renderItem(item: Item): HTMLElement {
   const card = document.createElement("article");
   card.className = "card";
@@ -319,11 +548,7 @@ function renderItem(item: Item): HTMLElement {
     .filter(Boolean)
     .join(", ");
 
-  const link = document.createElement("a");
-  link.href = item.link;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.textContent = t("viewOn");
+  const link = linkEl(item.link, t("viewOn"));
   link.className = "item-link";
 
   card.append(title, meta, link);
@@ -451,6 +676,7 @@ function showAlternatives(places: Place[], chosen: Place): void {
       page = 1;
       rerunList = () => runPlace(p);
       showAlternatives(places, p);
+      void loadPlaces(p);
       void runPlace(p);
     });
     placeInfo.append(button);
@@ -464,6 +690,8 @@ async function submitSearch(): Promise<void> {
 
   if (!placeText) {
     rerunList = runSearch;
+    clearPlaces();
+    rerunPlaces = null;
     await runSearch();
     return;
   }
@@ -480,6 +708,7 @@ async function submitSearch(): Promise<void> {
     rerunList = () => runPlace(chosen);
     rerunMap = null; // картата вече показва резултатите от мястото
     showAlternatives(results, chosen);
+    void loadPlaces(chosen);
     await runPlace(chosen);
   } catch (error) {
     showError(statusEl, error, true);
@@ -536,7 +765,9 @@ document.querySelectorAll<HTMLButtonElement>(".lang button").forEach((button) =>
     // Повтаряме последните действия на новия език
     if (rerunList) void rerunList();
     if (rerunMap) void rerunMap();
+    if (rerunPlaces) void rerunPlaces();
   });
 });
 
 refreshLanguage();
+syncPlacesVisibility();
