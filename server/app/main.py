@@ -4,7 +4,7 @@ import os
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import europeana, geocode, places
+from . import art, europeana, geocode, places
 
 app = FastAPI(title="Eco-Cultural Heritage API")
 
@@ -213,3 +213,34 @@ async def places_in_area(
         raise HTTPException(422, str(e))
     except RuntimeError as e:
         raise HTTPException(503, str(e))
+
+
+@app.get("/api/art/styles")
+def art_styles():
+    return {"styles": list(art.STYLES)}
+
+
+@app.get("/api/art/search")
+async def art_search(
+    source: str = Query("europeana", pattern="^(europeana|aic)$"),
+    artist: str | None = Query(None, max_length=80),
+    style: str | None = Query(None, max_length=40),
+    year_from: int | None = Query(None, ge=-3000, le=2100),
+    year_to: int | None = Query(None, ge=-3000, le=2100),
+    reusable: bool = True,
+    lang: str = Lang,
+    page: int = Query(1, ge=1),
+    rows: int = Query(24, ge=1, le=60),
+):
+    """Картини от Europeana или Art Institute of Chicago."""
+    if style and style not in art.STYLES:
+        raise HTTPException(422, f"Unknown style: {style}")
+    if year_from is not None and year_to is not None and year_from > year_to:
+        raise HTTPException(422, "year_from must not be greater than year_to")
+    paging(page, rows)  # пази ограничението за първите 1000 резултата
+    try:
+        return await art.search(
+            source, artist, style, year_from, year_to, page, rows, lang, reusable
+        )
+    except RuntimeError as e:
+        raise HTTPException(502, str(e))
