@@ -1,7 +1,7 @@
 import math
 import os
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import art, europeana, geocode, places
@@ -244,3 +244,19 @@ async def art_search(
         )
     except RuntimeError as e:
         raise HTTPException(502, str(e))
+
+
+@app.get("/api/art/image/{image_id}")
+async def art_image(image_id: str, w: int = Query(400)):
+    """Изображение от Art Institute of Chicago през нашия бекенд."""
+    try:
+        data, content_type = await art.fetch_aic_image(image_id, w)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except RuntimeError as e:
+        raise HTTPException(502, str(e))
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )

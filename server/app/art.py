@@ -1,12 +1,21 @@
 import os
+import re
 
 import httpx
+from cachetools import TTLCache
 
 from .europeana import EU_URL, error_message, first, lang_aware
 
 AIC_SEARCH_URL = "https://api.artic.edu/api/v1/artworks/search"
 AIC_IIIF_DEFAULT = "https://www.artic.edu/iiif/2"
 AIC_SITE = "https://www.artic.edu/artworks"
+AIC_IMAGE_BASE = "https://www.artic.edu/iiif/2"
+
+# Сървърът с изображенията на музея не позволява вграждане в чужди сайтове,
+# затова ги взимаме през нашия бекенд.
+_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+IMAGE_SIZES = {400, 843}
+_img_cache: TTLCache = TTLCache(maxsize=200, ttl=24 * 3600)
 
 USER_AGENT = os.getenv(
     "NOMINATIM_USER_AGENT", "EcoCulturalHeritageApp/0.3 (academic project)"
@@ -101,8 +110,8 @@ def aic_item(d: dict, iiif: str) -> dict | None:
         "style": d.get("style_title") or "",
         "medium": d.get("medium_display") or "",
         "origin": d.get("place_of_origin") or "",
-        "image": f"{base}/full/400,/0/default.jpg",
-        "image_large": f"{base}/full/843,/0/default.jpg",
+        "image": f"/api/art/image/{image_id}?w=400",
+        "image_large": f"/api/art/image/{image_id}?w=843",
         "link": f"{AIC_SITE}/{d['id']}",
         "credit": d.get("credit_line") or "Art Institute of Chicago",
         "license": "CC0",
@@ -232,3 +241,27 @@ async def search(source, artist, style, year_from, year_to, page, rows,
         data = await search_europeana(artist, style, year_from, year_to,
                                       start, rows, lang, reusable)
     return {"source": source, "page": page, "rows": rows, **data}
+
+
+async def fetch_aic_image(image_id: str, width: int) -> tuple[bytes, str]:
+    """Взима изображение от музея за нашия прокси. Връща (байтове, тип)."""
+    if not _UUID.match(image_id) or width not in IMAGE_SIZES:
+        raise ValueError("Invalid image request")
+    key = (image_id, width)
+    if key in _img_cache:
+        return _img_cache[key]
+
+    url = f"{AIC_IMAGE_BASE}/{image_id}/full/{width},/0/default.jpg"
+    headers = {
+        "User-Agent": USER_AGENT,
+        "AIC-User-Agent": USER_AGENT,
+        "Referer": "https://www.artic.edu/",
+    }
+    async with httpx.AsyncClient(timeout=20, headers=headers) as client:
+        r = await client.get(url)
+    content_type = r.headers.get("content-type", "")
+    if r.status_code != 200 or not content_type.startswith("image/"):
+        raise RuntimeError(f"Art Institute image returned {r.status_code}")
+    result = (r.content, content_type)
+    _img_cache[key] = result
+    return result

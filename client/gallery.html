@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Галерия с картини</title>
+  </head>
+  <body>
+    <main id="app">
+      <header class="top">
+        <div>
+          <h1 data-a="pageTitle">Галерия с картини</h1>
+          <nav class="site-nav">
+            <a href="/" data-a="navHome"></a>
+          </nav>
+        </div>
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" data-lang="bg">BG</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+      </header>
+
+      <div class="tabs" role="group">
+        <button type="button" class="tab" data-source="europeana" data-a="tabEuropeana"></button>
+        <button type="button" class="tab" data-source="aic" data-a="tabAic"></button>
+      </div>
+      <p id="source-note" class="note"></p>
+
+      <form id="art-form" class="art-filters">
+        <label>
+          <span data-a="artist"></span>
+          <input id="artist" type="text" data-a-placeholder="artistPlaceholder" />
+        </label>
+        <label>
+          <span data-a="style"></span>
+          <select id="style"></select>
+        </label>
+        <label>
+          <span data-a="period"></span>
+          <select id="period"></select>
+        </label>
+        <label>
+          <span data-a="yearFrom"></span>
+          <input id="year-from" type="number" min="-3000" max="2100" step="1" />
+        </label>
+        <label>
+          <span data-a="yearTo"></span>
+          <input id="year-to" type="number" min="-3000" max="2100" step="1" />
+        </label>
+        <label id="reusable-row" class="check">
+          <input id="reusable" type="checkbox" checked />
+          <span data-a="reusable"></span>
+        </label>
+        <div class="art-actions">
+          <button type="submit" data-a="search"></button>
+          <button type="button" id="reset" data-a="reset"></button>
+        </div>
+      </form>
+
+      <p id="art-status" role="status"></p>
+      <div id="gallery" class="gallery"></div>
+      <div id="art-pager" class="pager"></div>
+      <small class="attribution" data-a="attribution"></small>
+
+      <dialog id="viewer" aria-label="Painting">
+        <div id="viewer-body" class="viewer-body"></div>
+      </dialog>
+    </main>
+    <script type="module" src="/src/gallery.ts"></script>
+  </body>
+</html>
