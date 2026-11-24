@@ -2,8 +2,9 @@ import { getLang } from "./i18n";
 
 const dict = {
   bg: {
-    pageTitle: "Галерия с картини",
-    navHome: "← Карта и търсене",
+    pageTitle: "Галерия с картини", title: "Eco-Cultural Heritage App",
+    navHome: "Карта и търсене",
+    heroTitle: "Картини от музеи по света",
     navGallery: "Картини",
     tabEuropeana: "Europeana",
     tabAic: "Art Institute of Chicago",
@@ -66,8 +67,9 @@ const dict = {
     p_contemporary: "Съвременно изкуство (след 1950)",
   },
   en: {
-    pageTitle: "Painting gallery",
-    navHome: "← Map and search",
+    pageTitle: "Painting gallery", title: "Eco-Cultural Heritage App",
+    navHome: "Map and search",
+    heroTitle: "Paintings from museums around the world",
     navGallery: "Paintings",
     tabEuropeana: "Europeana",
     tabAic: "Art Institute of Chicago",

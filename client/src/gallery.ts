@@ -1,6 +1,9 @@
 import "./style.css";
 import { getLang, setLang, type Lang } from "./i18n";
 import { applyGalleryTranslations, ta, type AKey } from "./gallery-i18n";
+import { initHero } from "./hero";
+
+const hero = initHero("gallery");
 
 type Source = "europeana" | "aic";
 
@@ -356,6 +359,7 @@ resetBtn.addEventListener("click", () => {
 function refresh(): void {
   document.documentElement.lang = getLang();
   applyGalleryTranslations();
+  hero.refresh();
   fillStyles();
   fillPeriods();
   updateSourceUI();

@@ -7,18 +7,33 @@
   </head>
   <body>
     <main id="app">
-      <header class="top">
-        <div>
-          <h1 data-a="pageTitle">Галерия с картини</h1>
-          <nav class="site-nav">
-            <a href="/" data-a="navHome"></a>
-          </nav>
-        </div>
+      <header class="topbar">
+        <a class="brand" href="/">
+          <svg class="brand-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 19c3-4 6-6 9-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span data-a="title">Eco-Cultural Heritage App</span>
+        </a>
+        <nav class="site-nav" aria-label="Main">
+          <a href="/" data-a="navHome"></a>
+          <a href="/gallery.html" aria-current="page" data-a="navGallery"></a>
+        </nav>
         <div class="lang" role="group" aria-label="Language">
           <button type="button" data-lang="bg">BG</button>
           <button type="button" data-lang="en">EN</button>
         </div>
       </header>
+
+      <section id="hero" class="hero" aria-labelledby="hero-title">
+        <h1 id="hero-title" data-a="heroTitle"></h1>
+        <blockquote class="hero-quote">
+          <p id="hero-quote"></p>
+          <p id="hero-original" class="hero-original" lang="en" hidden></p>
+          <footer id="hero-author"></footer>
+        </blockquote>
+        <a id="hero-credit" class="hero-credit" href="#" hidden></a>
+      </section>
 
       <div class="tabs" role="group">
         <button type="button" class="tab" data-source="europeana" data-a="tabEuropeana"></button>

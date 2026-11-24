@@ -6,6 +6,9 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { applyTranslations, getLang, setLang, t, type Key, type Lang } from "./i18n";
 import { COUNTRIES } from "./countries";
+import { initHero } from "./hero";
+
+const hero = initHero("home");
 
 interface Item {
   id: string;
@@ -751,6 +754,7 @@ function fillCountries(): void {
 
 function refreshLanguage(): void {
   applyTranslations();
+  hero.refresh();
   fillRadius();
   fillCountries();
   document.querySelectorAll<HTMLButtonElement>(".lang button").forEach((b) => {
