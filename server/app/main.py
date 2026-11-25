@@ -4,7 +4,7 @@ import os
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import art, europeana, geocode, places
+from . import art, europeana, geocode, places, quiz
 
 app = FastAPI(title="Eco-Cultural Heritage API")
 
@@ -260,3 +260,16 @@ async def art_image(image_id: str, w: int = Query(400)):
         media_type=content_type,
         headers={"Cache-Control": "public, max-age=86400"},
     )
+
+
+@app.get("/api/art/quiz")
+async def art_quiz(
+    type: str = Query("style", pattern="^(artist|style|era)$"),
+    exclude: str = Query("", max_length=1500),
+):
+    """Въпрос за играта: картина, четири отговора и информация за разкриване."""
+    seen = {x for x in exclude.split(",") if x}
+    try:
+        return await quiz.make_question(type, seen)
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))    
