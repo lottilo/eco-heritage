@@ -790,3 +790,254 @@ input[type="checkbox"] {
     transition: opacity 0.8s ease;
   }
 }
+
+/* ============ Играта ============ */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: var(--shadow);
+}
+
+.mode-card strong {
+  color: var(--brand);
+  font-family: var(--serif);
+  font-size: 1.15rem;
+}
+
+.mode-card span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.mode-card:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--ink);
+}
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  justify-content: space-between;
+  margin: 4px 2px 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+#hud-score {
+  color: var(--brand);
+}
+
+.timer {
+  height: 6px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+#timer-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+}
+
+.game-frame {
+  margin: 0 0 16px;
+}
+
+.game-frame img {
+  display: block;
+  width: 100%;
+  max-height: 58vh;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: #232826;
+}
+
+#game-prompt {
+  margin: 4px 0 12px;
+  font-size: 1.35rem;
+}
+
+.options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+  text-align: left;
+}
+
+.option kbd {
+  flex: none;
+  min-width: 26px;
+  padding: 1px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--muted);
+  font: 600 0.8rem var(--sans);
+  text-align: center;
+}
+
+.option span:not(.option-mark) {
+  flex: 1;
+}
+
+.option-mark {
+  flex: none;
+  font-weight: 700;
+}
+
+.option.correct {
+  border-color: #2e6b4a;
+  background: #e3f1e8;
+  color: #12331f;
+  opacity: 1;
+}
+
+.option.wrong {
+  border-color: #b3402a;
+  background: #fbe7e2;
+  color: #5c1d10;
+  opacity: 1;
+}
+
+.option.dim {
+  opacity: 0.55;
+}
+
+.feedback {
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--muted);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.feedback[data-result="correct"] {
+  border-left-color: #2e6b4a;
+}
+
+.feedback[data-result="wrong"] {
+  border-left-color: #b3402a;
+}
+
+.feedback-line {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.feedback h3 {
+  margin: 8px 0 6px;
+  font-size: 1.15rem;
+}
+
+.feedback dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+}
+
+.feedback dt {
+  color: var(--muted);
+}
+
+.feedback dd {
+  margin: 0;
+}
+
+.feedback #next-btn {
+  display: block;
+  margin-top: 14px;
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+.feedback #next-btn:hover:not(:disabled) {
+  border-color: var(--brand-hover);
+  background: var(--brand-hover);
+  color: #fff;
+}
+
+.end-score {
+  margin: 4px 0;
+  color: var(--brand);
+  font: 600 clamp(2.2rem, 6vw, 3.4rem) / 1.1 var(--serif);
+}
+
+.end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 22px;
+}
+
+#again-btn {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+#again-btn:hover:not(:disabled) {
+  border-color: var(--brand-hover);
+  background: var(--brand-hover);
+  color: #fff;
+}
+
+.review-list {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.review-ok span {
+  color: #2e6b4a;
+  font-weight: 700;
+}
+
+.review-miss span {
+  color: #b3402a;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .options {
+    grid-template-columns: 1fr;
+  }
+}

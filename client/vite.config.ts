@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
         gallery: fileURLToPath(new URL("./gallery.html", import.meta.url)),
+        game: fileURLToPath(new URL("./game.html", import.meta.url)),
       },
     },
   },

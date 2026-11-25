@@ -4,6 +4,7 @@ const dict = {
   bg: {
     pageTitle: "Галерия с картини", title: "Eco-Cultural Heritage App",
     navHome: "Карта и търсене",
+    navGame: "Игра",
     heroTitle: "Картини от музеи по света",
     navGallery: "Картини",
     tabEuropeana: "Europeana",
@@ -69,6 +70,7 @@ const dict = {
   en: {
     pageTitle: "Painting gallery", title: "Eco-Cultural Heritage App",
     navHome: "Map and search",
+    navGame: "Game",
     heroTitle: "Paintings from museums around the world",
     navGallery: "Paintings",
     tabEuropeana: "Europeana",

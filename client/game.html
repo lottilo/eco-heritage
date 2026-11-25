@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Игра: познай картината</title>
+  </head>
+  <body>
+    <main id="app">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <svg class="brand-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M5 19c3-4 6-6 9-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span data-g="title">Eco-Cultural Heritage App</span>
+        </a>
+        <nav class="site-nav" aria-label="Main">
+          <a href="/" data-g="navHome"></a>
+          <a href="/gallery.html" data-g="navGallery"></a>
+          <a href="/game.html" aria-current="page" data-g="navGame"></a>
+        </nav>
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" data-lang="bg">BG</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+      </header>
+
+      <section id="hero" class="hero" aria-labelledby="hero-title">
+        <h1 id="hero-title" data-g="heroTitle"></h1>
+        <blockquote class="hero-quote">
+          <p id="hero-quote"></p>
+          <p id="hero-original" class="hero-original" lang="en" hidden></p>
+          <footer id="hero-author"></footer>
+        </blockquote>
+        <a id="hero-credit" class="hero-credit" href="#" hidden></a>
+      </section>
+
+      <p id="game-status" role="status"></p>
+      <button type="button" id="retry-btn" hidden></button>
+
+      <section id="screen-modes">
+        <h2 data-g="modeTitle"></h2>
+        <p class="note" data-g="howTo"></p>
+        <div class="mode-grid">
+          <button type="button" class="mode-card" data-mode="mixed">
+            <strong data-g="modeMixed"></strong>
+            <span data-g="modeMixedHint"></span>
+          </button>
+          <button type="button" class="mode-card" data-mode="artist">
+            <strong data-g="modeArtist"></strong>
+            <span data-g="modeArtistHint"></span>
+          </button>
+          <button type="button" class="mode-card" data-mode="style">
+            <strong data-g="modeStyle"></strong>
+            <span data-g="modeStyleHint"></span>
+          </button>
+          <button type="button" class="mode-card" data-mode="era">
+            <strong data-g="modeEra"></strong>
+            <span data-g="modeEraHint"></span>
+          </button>
+        </div>
+      </section>
+
+      <section id="screen-play" hidden>
+        <div class="hud">
+          <span id="hud-progress"></span>
+          <span id="hud-score"></span>
+          <span id="hud-streak"></span>
+        </div>
+        <div class="timer" aria-hidden="true"><div id="timer-fill"></div></div>
+        <figure class="game-frame">
+          <img id="game-image" alt="" />
+        </figure>
+        <h2 id="game-prompt"></h2>
+        <div id="game-options" class="options"></div>
+        <div id="game-feedback" class="feedback" hidden>
+          <p id="feedback-line" class="feedback-line" role="status"></p>
+          <h3 id="feedback-title"></h3>
+          <dl id="feedback-details"></dl>
+          <a id="feedback-link" href="#" target="_blank" rel="noopener" hidden></a>
+          <button type="button" id="next-btn"></button>
+        </div>
+      </section>
+
+      <section id="screen-end" hidden>
+        <h2 data-g="endTitle"></h2>
+        <p id="end-score" class="end-score"></p>
+        <p id="end-correct"></p>
+        <p id="end-best" class="note"></p>
+        <div class="end-actions">
+          <button type="button" id="again-btn" data-g="playAgain"></button>
+          <button type="button" id="mode-btn" data-g="changeMode"></button>
+        </div>
+        <h3 data-g="review"></h3>
+        <ul id="review-list" class="review-list"></ul>
+      </section>
+
+      <small class="attribution" data-g="attribution"></small>
+    </main>
+    <script type="module" src="/src/game.ts"></script>
+  </body>
+</html>

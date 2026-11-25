@@ -1,6 +1,6 @@
 import { getLang, type Lang } from "./i18n";
 
-export type HeroKind = "home" | "gallery";
+export type HeroKind = "home" | "gallery" | "game";
 
 interface Quote {
   text: Record<Lang, string>; // превод за българския интерфейс
@@ -32,6 +32,16 @@ const QUOTES: Record<HeroKind, Quote> = {
     author: { bg: "Винсент ван Гог", en: "Vincent van Gogh" },
     source: { bg: "писмо до Антон ван Рапард, 1885", en: "letter to Anthon van Rappard, 1885" },
     artist: "Vincent van Gogh",
+  },
+  game: {
+    text: {
+      bg: "Най-великото, което човешката душа върши на този свят, е да види нещо и да разкаже с прости думи какво е видяла.",
+      en: "The greatest thing a human soul ever does in this world is to see something, and tell what it saw in a plain way.",
+    },
+    original: "The greatest thing a human soul ever does in this world is to see something, and tell what it saw in a plain way.",
+    author: { bg: "Джон Ръскин", en: "John Ruskin" },
+    source: { bg: "Modern Painters, т. III, 1856", en: "Modern Painters, vol. III, 1856" },
+    artist: "Georges Seurat",
   },
 };
 
